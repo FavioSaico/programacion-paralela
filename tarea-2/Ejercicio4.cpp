@@ -22,7 +22,7 @@ int cantPoints(int n){
 
 int main() {
 	
-	double x,y,d,api; // puntos X y Y, d es la distancia y api la aproximación de PI
+	double x,y,d,api; // puntos X y Y, d es la distancia y api la aproximaciÃ³n de PI
 	double n=1000000,cp=0; // cp es la cantidad de puntos que cayeron en el circulo, n es la cantidad de puntos que vamos a generar
 	double inicio, duracion;
 	
