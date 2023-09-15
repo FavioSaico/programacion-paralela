@@ -1,0 +1,11 @@
+
+.img-vertical{
+    max-width: 70%;
+    /* min-width: none; */
+    margin: 0.5em 0;
+}
+
+.card{
+    /* max-width: 300px; */
+    padding: 0;
+}
