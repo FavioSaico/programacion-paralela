@@ -86,7 +86,7 @@ int eratosthenesOdd(int lastNumber, bool useOpenMP)
 
 int main()
 {
-   srand(time(NULL)); // Inicializar la semilla para números aleatorios
+   srand(time(NULL)); // Inicializar la semilla para nÃºmeros aleatorios
    
    double inicio, duracion;
    
