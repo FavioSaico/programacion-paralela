@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido AJAX</title>
+</head>
+
+<style>
+
+
+
+table{
+  border : 1px solid black;
+  border-collapse: collapse;
+  float: left; /* Alinea las tablas a la izquierda */
+}
+
+th,td {
+  padding: 5px;
+  text-align: center;
+}
+</style>
+<body>
+
+<button type="button" onclick="loadXMLDoc()">MOSTRAR CARACTERISTICAS DE LAS PLANTAS</button>
+<br><br>
+<div class="tabla-container">
+    <table id="demo_nombres"></table>
+    <table id="demo_zonas"></table>
+    <table id="demo_precios"></table>
+</div>
+<script>
+function loadXMLDoc() {
+  var xmlhttp_nombres = new XMLHttpRequest();
+  var xmlhttp_zonas = new XMLHttpRequest();
+  var xmlhttp_precios = new XMLHttpRequest();
+
+  xmlhttp_nombres.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      myFunction_nombres(this);
+    }
+  };
+
+  xmlhttp_zonas.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      myFunction_zonas(this);
+    }
+  };
+
+  xmlhttp_precios.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      myFunction_precios(this);
+    }
+  };
+
+  xmlhttp_nombres.open("GET", "http://localhost/xml_docs/plant_catalog.xml", true);
+  xmlhttp_zonas.open("GET", "http://localhost/xml_docs/plant_catalog.xml", true);
+  xmlhttp_precios.open("GET", "http://localhost/xml_docs/plant_catalog.xml", true);
+
+  xmlhttp_nombres.send();
+  xmlhttp_zonas.send();
+  xmlhttp_precios.send();
+}
+
+function myFunction_nombres(xml) {
+  var i;
+  var xmlDoc = xml.responseXML;
+  var table="<tr><th>Comun</th><th>Cientifico</th></tr>";
+  var x = xmlDoc.getElementsByTagName("PLANT");
+  for (i = 0; i <x.length; i++) { 
+    table += "<tr><td>" +
+    x[i].getElementsByTagName("COMMON")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("BOTANICAL")[0].childNodes[0].nodeValue +
+    "</td></tr>";
+  }
+  document.getElementById("demo_nombres").innerHTML = table;
+}
+
+function myFunction_zonas(xml) {
+  var i;
+  var xmlDoc = xml.responseXML;
+  var table="<tr><th>Planta</th><th>Zona</th></tr>";
+  var x = xmlDoc.getElementsByTagName("PLANT");
+  for (i = 0; i <x.length; i++) { 
+    table += "<tr><td>" +
+    x[i].getElementsByTagName("COMMON")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("ZONE")[0].childNodes[0].nodeValue +
+    "</td></tr>";
+  }
+  document.getElementById("demo_zonas").innerHTML = table;
+}
+
+function myFunction_precios(xml) {
+  var i;
+  var xmlDoc = xml.responseXML;
+  var table="<tr><th>Planta</th><th>Precio</th></tr>";
+  var x = xmlDoc.getElementsByTagName("PLANT");
+  for (i = 0; i <x.length; i++) { 
+    table += "<tr><td>" +
+    x[i].getElementsByTagName("COMMON")[0].childNodes[0].nodeValue +
+    "</td><td>" +
+    x[i].getElementsByTagName("PRICE")[0].childNodes[0].nodeValue +
+    "</td></tr>";
+  }
+  document.getElementById("demo_precios").innerHTML = table;
+}
+</script>
+
+</body>
+</html>
