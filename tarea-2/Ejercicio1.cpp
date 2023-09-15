@@ -85,7 +85,7 @@ void multiplicarMatricesParalela(int matriz1[][m], int matriz2[][m], int resulta
 
 int main()
 {
-   srand(time(NULL)); // Inicializar la semilla para números aleatorios
+   srand(time(NULL)); // Inicializar la semilla para nÃºmeros aleatorios
 
    double inicio, duracion;
    
