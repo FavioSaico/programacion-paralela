@@ -106,7 +106,7 @@ int main()
 {
 	
 
-	srand(time(NULL)); // Inicializar la semilla para números aleatorios
+	srand(time(NULL)); // Inicializar la semilla para nÃºmeros aleatorios
 	double inicio, duracion;
 	int dim =8000;
 	vector<int>arreglo1(dim);
