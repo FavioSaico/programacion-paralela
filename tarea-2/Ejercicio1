@@ -1,7 +1,7 @@
 /*
-    Realiza la multiplicación de dos matrices cuadradas grandes (por ejemplo, 
+    Realiza la multiplicaciÃ³n de dos matrices cuadradas grandes (por ejemplo, 
     1000x1000) tanto de manera secuencial como en paralelo utilizando OpenMP. 
-    Divide el trabajo en filas o bloques y mide el tiempo de ejecución en ambos casos.
+    Divide el trabajo en filas o bloques y mide el tiempo de ejecuciÃ³n en ambos casos.
 */
 #include <stdio.h>
 #include <omp.h>
