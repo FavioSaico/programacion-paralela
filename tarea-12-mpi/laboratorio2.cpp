@@ -20,11 +20,10 @@
 
 using namespace cv;
 
-void convertirBlancoNegro(Mat& img) {
-    for (int i = 0; i < img.rows; ++i) {
+void convertirBlancoNegro(Mat& img, int inicio, int fin) {
+    for (int i = inicio; i < fin; ++i) {
         for (int j = 0; j < img.cols; ++j) {
             Vec3b pixel = img.at<Vec3b>(i, j);
-            // Convierte a escala de grises promediando los canales
             uchar gris = (pixel[0] + pixel[1] + pixel[2]) / 3;
             img.at<Vec3b>(i, j) = Vec3b(gris, gris, gris);
         }
@@ -43,7 +42,7 @@ int main(int argc, char** argv) {
     Mat imagen; // imagen como matriz
     Mat imagenPart;
     int filas, cols;
-    int bloque, inicio, fin
+    int bloque, inicio, fin;
     if (rank == 0) {
         imagen = imread(argv[1]);
         if (imagen.empty()) {
@@ -51,37 +50,50 @@ int main(int argc, char** argv) {
             MPI_Finalize();
             return 1;
         }
-        filas = imagen.rows;
-        cols = imagen.cols;
+        /*filas = imagen.rows;
+        cols = imagen.cols;*/
         
         // Divide las filas entre los procesos
-	    bloque = filas / size; // filas por proceso
+	    //bloque = filas / size; // filas por proceso
 	    
-	    for (int i=0; i<size; i++){
-	    	Rect roi(0, i * bloque, imagen.cols, bloque);
-	    	imagenPart = imagen(roi);
+	    for (int i=1; i<size; i++){
+	    	/*Rect roi(0, i * bloque, imagen.cols, bloque);
+	    	imagenPart = imagen(roi);*/
 	    	
-	    	MPI_Send(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD); // imagenPart.size()
+	    	//MPI_Send(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD); // imagenPart.size()
+	    	MPI_Send(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD);
 		}
         
     }
+	filas = imagen.rows;
+    cols = imagen.cols;
+    
+	// Divide las filas entre los procesos
+   	bloque = filas / size;
+    inicio = rank * bloque;
+    fin = (rank == size - 1) ? filas : (rank + 1) * bloque;
 	
 	// Procesamiento paralelo de la imagen
-	MPI_Recv(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
+	//MPI_Recv(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
+	if (rank != 0) {
+		MPI_Recv(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
+	}
 	
-    convertirBlancoNegro(imagenPart);
+    convertirBlancoNegro(imagen, inicio, fin);
 	
 	// Convertir la parte procesada de la imagen a bytes
     std::vector<uchar> imagenBytes;
-    imencode(".jpg", imagenPart, imagenBytes);
+    imencode(".jpg", imagen, imagenBytes);
 	
 	// Recopila los resultados utilizando MPI_Gather
-    std::vector<uchar> imagenCompletaBytes(size * filasPorProceso * cols * 3);
+    std::vector<uchar> imagenCompletaBytes(size * bloque * cols * 3);
     
     MPI_Gather(imagenBytes.data(), imagenBytes.size(), MPI_UNSIGNED_CHAR,
                imagenCompletaBytes.data(), imagenBytes.size(), MPI_UNSIGNED_CHAR,
                0, MPI_COMM_WORLD);
 
+
+	std::cout << "Proceso " << rank << " transformando las filas del "<< inicio <<" al "<< fin << std::endl;
 
 	// Solo el proceso 0 guarda la imagen resultante
     if (rank == 0) {
