@@ -14,8 +14,8 @@
 		imagen resultante en un archivo y la muestra.
 
 */
-#include <mpi.h>
 #include <iostream>
+#include <mpi.h>
 #include <opencv2/opencv.hpp>
 
 using namespace cv;
@@ -33,16 +33,20 @@ void convertirBlancoNegro(Mat& img, int inicio, int fin) {
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
-    int rank, size;
-    
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int size, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-	// Solo el proceso 0 lee la imagen y las distribuye
-    Mat imagen; // imagen como matriz
-    Mat imagenPart;
-    int filas, cols;
-    int bloque, inicio, fin;
+    if (argc != 3) {
+        if (rank == 0) {
+            std::cerr << "Uso: " << argv[0] << " <imagen_entrada.jpg> <imagen_salida.jpg>" << std::endl;
+        }
+        MPI_Finalize();
+        return 1;
+    }
+
+    // Solo el proceso 0 lee la imagen
+    Mat imagen;
     if (rank == 0) {
         imagen = imread(argv[1]);
         if (imagen.empty()) {
@@ -50,55 +54,37 @@ int main(int argc, char** argv) {
             MPI_Finalize();
             return 1;
         }
-        /*filas = imagen.rows;
-        cols = imagen.cols;*/
-        
-        // Divide las filas entre los procesos
-	    //bloque = filas / size; // filas por proceso
-	    
-	    for (int i=1; i<size; i++){
-	    	/*Rect roi(0, i * bloque, imagen.cols, bloque);
-	    	imagenPart = imagen(roi);*/
-	    	
-	    	//MPI_Send(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD); // imagenPart.size()
-	    	MPI_Send(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD);
-		}
-        
     }
-	filas = imagen.rows;
-    cols = imagen.cols;
-    
-	// Divide las filas entre los procesos
-   	bloque = filas / size;
-    inicio = rank * bloque;
-    fin = (rank == size - 1) ? filas : (rank + 1) * bloque;
-	
-	// Procesamiento paralelo de la imagen
-	//MPI_Recv(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
-	if (rank != 0) {
-		MPI_Recv(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	}
-	
-    convertirBlancoNegro(imagen, inicio, fin);
-	
-	// Convertir la parte procesada de la imagen a bytes
-    std::vector<uchar> imagenBytes;
-    imencode(".jpg", imagen, imagenBytes);
-	
-	// Recopila los resultados utilizando MPI_Gather
-    std::vector<uchar> imagenCompletaBytes(size * bloque * cols * 3);
-    
-    MPI_Gather(imagenBytes.data(), imagenBytes.size(), MPI_UNSIGNED_CHAR,
-               imagenCompletaBytes.data(), imagenBytes.size(), MPI_UNSIGNED_CHAR,
-               0, MPI_COMM_WORLD);
 
-
-	std::cout << "Proceso " << rank << " transformando las filas del "<< inicio <<" al "<< fin << std::endl;
-
-	// Solo el proceso 0 guarda la imagen resultante
+    // Broadcast del tamaño de la imagen
+    int filas, cols;
     if (rank == 0) {
-    	Mat imagenCompleta = imdecode(imagenCompletaBytes, IMREAD_UNCHANGED);
-        imwrite(argv[2], imagen); // guardamos la imagen con el nombre del segundo argumento.
+        filas = imagen.rows;
+        cols = imagen.cols;
+    }
+    MPI_Bcast(&filas, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&cols, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // Divide las filas entre los procesos
+    int filasPorProceso = filas / size;
+    int inicio = rank * filasPorProceso;
+    int fin = (rank == size - 1) ? filas : (rank + 1) * filasPorProceso;
+
+    // Broadcast de la parte de la imagen que corresponde a cada proceso
+    if (rank != 0) {
+        imagen = Mat(filas, cols, CV_8UC3);
+    }
+    MPI_Bcast(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+
+    // Procesamiento paralelo de la imagen
+    convertirBlancoNegro(imagen, inicio, fin);
+
+    // Recopila los resultados
+    MPI_Gather(imagen.data + inicio * cols * 3, (fin - inicio) * cols * 3, MPI_UNSIGNED_CHAR, imagen.data, (fin - inicio) * cols * 3, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
+
+    // Solo el proceso 0 guarda la imagen resultante
+    if (rank == 0) {
+        imwrite(argv[2], imagen);
     }
 
     MPI_Finalize();
