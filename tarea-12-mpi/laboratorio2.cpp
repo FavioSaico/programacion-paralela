@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 	// Procesamiento paralelo de la imagen
 	//MPI_Recv(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
 	if (rank != 0) {
-		MPI_Recv(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
+		MPI_Recv(imagen.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
 	
     convertirBlancoNegro(imagen, inicio, fin);
