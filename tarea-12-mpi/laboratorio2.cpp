@@ -16,9 +16,80 @@
 */
 #include <mpi.h>
 #include <iostream>
+#include <opencv2/opencv.hpp>
+
+using namespace cv;
+
+void convertirBlancoNegro(Mat& img) {
+    for (int i = 0; i < img.rows; ++i) {
+        for (int j = 0; j < img.cols; ++j) {
+            Vec3b pixel = img.at<Vec3b>(i, j);
+            // Convierte a escala de grises promediando los canales
+            uchar gris = (pixel[0] + pixel[1] + pixel[2]) / 3;
+            img.at<Vec3b>(i, j) = Vec3b(gris, gris, gris);
+        }
+    }
+}
 
 int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+
+    int rank, size;
     
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	// Solo el proceso 0 lee la imagen y las distribuye
+    Mat imagen; // imagen como matriz
+    Mat imagenPart;
+    int filas, cols;
+    int bloque, inicio, fin
+    if (rank == 0) {
+        imagen = imread(argv[1]);
+        if (imagen.empty()) {
+            std::cerr << "Error al cargar la imagen." << std::endl;
+            MPI_Finalize();
+            return 1;
+        }
+        filas = imagen.rows;
+        cols = imagen.cols;
+        
+        // Divide las filas entre los procesos
+	    bloque = filas / size; // filas por proceso
+	    
+	    for (int i=0; i<size; i++){
+	    	Rect roi(0, i * bloque, imagen.cols, bloque);
+	    	imagenPart = imagen(roi);
+	    	
+	    	MPI_Send(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, i, 0, MPI_COMM_WORLD); // imagenPart.size()
+		}
+        
+    }
+	
+	// Procesamiento paralelo de la imagen
+	MPI_Recv(imagenPart.data, filas * cols * 3, MPI_UNSIGNED_CHAR, 0, 0, MPI_COMM_WORLD);
+	
+    convertirBlancoNegro(imagenPart);
+	
+	// Convertir la parte procesada de la imagen a bytes
+    std::vector<uchar> imagenBytes;
+    imencode(".jpg", imagenPart, imagenBytes);
+	
+	// Recopila los resultados utilizando MPI_Gather
+    std::vector<uchar> imagenCompletaBytes(size * filasPorProceso * cols * 3);
+    
+    MPI_Gather(imagenBytes.data(), imagenBytes.size(), MPI_UNSIGNED_CHAR,
+               imagenCompletaBytes.data(), imagenBytes.size(), MPI_UNSIGNED_CHAR,
+               0, MPI_COMM_WORLD);
+
+
+	// Solo el proceso 0 guarda la imagen resultante
+    if (rank == 0) {
+    	Mat imagenCompleta = imdecode(imagenCompletaBytes, IMREAD_UNCHANGED);
+        imwrite(argv[2], imagen); // guardamos la imagen con el nombre del segundo argumento.
+    }
+
+    MPI_Finalize();
     return 0;
 }
 
